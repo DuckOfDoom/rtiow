@@ -44,7 +44,12 @@ mkPpmFile =
 
   where 
     is = [0..width-1]
-    js = reverse [0..height-2]
+    js = 
+    -- For some reason subtraction inside range declaration does not work and returns empty list =_=
+      let 
+        j1 = height-1
+        j2 = height-2
+        in [j1, j2..0]
 
     flap = flip map
 
