@@ -25,7 +25,7 @@ mkPpmFile :: String
 mkPpmFile = 
   mconcat ["P3\n", show width, " ", show height, "\n255\n"] ++
   (unlines $
-    flap (reverse [0..height-2]) 
+    flap ([height-2,height-1..0]) 
       (\j ->
         unlines $ flap [0..width-1] (\i -> mkLine i j)) 
   )
