@@ -8,9 +8,13 @@ import Data.List (intersperse)
 
 import Vec3 (Vec3, (.-), (.**), (.+))
 import Ray (Ray(..))
+import Hitable (Hitable(..), HitRecord(..))
+import Sphere (Sphere(..))
 
 import qualified Vec3 as V 
 import qualified Ray as R
+
+import qualified Utils 
 
 main :: IO ()
 main = writeFile "output.ppm" mkPpmFile
@@ -27,15 +31,12 @@ hitSphere ray center radius
     c = V.dot oc oc - radius * radius 
     discriminant = b * b - 4 * a * c
 
-color :: Ray -> Vec3
-color r =
-  let t = hitSphere r (0, 0, -1) 0.5
-   in 
-    if t > 0.0
-      then
-        let n = V.mkUnitVec3 (R.pointAt r t .- (0, 0, -1))
-        in (V.x n + 1, V.y n + 1, V.z n + 1) .** 0.5
-      else 
+color :: Hitable a => Ray -> [a] -> Vec3
+color r hitables =
+  case (hit hitables r 0.0 Utils.maxFloat) of
+    Just (HitRecord _ _ normal) ->  
+      (V.x normal + 1, V.y normal + 1, V.z normal + 1)  .** 0.5
+    Nothing -> 
         let unitDirection = V.mkUnitVec3 (R.direction r)
             t = 0.5 * (V.y unitDirection + 1.0)
         in (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
@@ -68,6 +69,11 @@ mkPpmFile =
     vertical = (0.0, 2.0, 0.0)
     origin = (0.0, 0.0, 0.0)
 
+    hitableList = 
+      [ Sphere (0, -100.5, -1) 100
+      , Sphere (0,0,-1) 0.5
+      ]
+
     mkLine :: Int -> Int -> String
     mkLine i j = 
       let 
@@ -75,7 +81,7 @@ mkPpmFile =
         v = fromIntegral j / fromIntegral height :: Double
 
         r = Ray origin (lowerLeftCorner .+ horizontal .** u .+ vertical .** v)
-        col = color r
+        col = color r hitableList
 
         ir = 255.99 * V.r col
         ig = 255.99 * V.g col
