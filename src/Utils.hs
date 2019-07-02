@@ -1,5 +1,6 @@
 module Utils 
- ( maxFloat )
+ ( maxFloat
+ )
 where
 
 maxFloat :: Double
