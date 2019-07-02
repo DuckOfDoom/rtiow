@@ -22,4 +22,4 @@ mkDefaultCamera = Camera
  }
 
 getRay :: Camera -> Double -> Double -> Ray
-getRay Camera{..} u v = Ray origin (lowerLeftCorner .+ horizontal .** u .+ vertical .** v)
+getRay Camera{..} u v = Ray origin (lowerLeftCorner .+ (horizontal .** u) .+ (vertical .** v) .- origin)

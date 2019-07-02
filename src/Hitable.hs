@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Hitable 
 where
@@ -14,8 +15,10 @@ data HitRecord = HitRecord
   , p :: Vec3
   , normal :: Vec3
   }
+  deriving (Show)
 
-class Hitable a where
+-- Type family?
+class (Show a) => Hitable a where
   hit :: a -> Ray -> Double -> Double -> Maybe HitRecord
 
 -- man this shit is ugly

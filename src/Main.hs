@@ -18,6 +18,7 @@ import qualified Ray           as R
 import qualified Vec3          as V
 
 import qualified Utils
+import Debug.Trace
 
 main :: IO ()
 main = mkPpmFile >>= writeFile "output.ppm"
@@ -39,12 +40,13 @@ hitSphere ray center radius
 color :: Hitable a => Ray -> [a] -> Vec3
 color r hitables =
   case (hit hitables r 0.0 Utils.maxFloat) of
-    Just (HitRecord _ _ normal) ->
+    Just (HitRecord _ _ normal) -> -- trace ("hit! " <> show r) $
       (V.x normal + 1, V.y normal + 1, V.z normal + 1)  .** 0.5
-    Nothing ->
-        let unitDirection = V.mkUnitVec3 (R.direction r)
-            t = 0.5 * (V.y unitDirection + 1.0)
-        in (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
+    Nothing -> 
+      (0.0, 0.0, 0.0)
+        -- let unitDirection = V.mkUnitVec3 (R.direction r)
+        --     t = 0.5 * (V.y unitDirection + 1.0)
+        -- in (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
 
 mkPpmFile :: IO String
 mkPpmFile = do
@@ -72,8 +74,8 @@ mkPpmFile = do
     camera = C.mkDefaultCamera
 
     hitableList =
-      [ Sphere (0, -100.5, -1) 100
-      -- , Sphere (0, 0, -1) 0.5
+      [ Sphere (0, 0, -1) 0.5 
+      , Sphere (0, -100.5, -1) 100
       ]
 
     mkLine :: Int -> Int -> IO String

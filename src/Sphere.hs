@@ -11,6 +11,7 @@ data Sphere = Sphere
   { center :: Vec3
   , radius :: Double
   }
+  deriving (Show)
 
   -- hit :: a -> Ray -> Double -> Double -> Maybe HitRecord
 instance Hitable Sphere where
