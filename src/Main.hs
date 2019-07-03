@@ -13,27 +13,33 @@ import           Camera        as C (getRay, mkDefaultCamera)
 import           Hitable       (HitRecord (..), Hitable (..))
 import           Ray           (Ray (..))
 import           Sphere        (Sphere (..))
-import           Vec3          (Vec3, (.**), (.+), (.//))
+import           Vec3          (Vec3, (.**), (.+), (.-), (.//))
 
 import qualified Ray           as R
 import qualified Vec3          as V
 
 import qualified Utils
+import Utils (toDouble)
+
 import Debug.Trace
 
 main :: IO ()
 main = mkPpmFile >>= writeFile "output.ppm"
 
 -- gets a color by tracing a ray against a list of hitable objects
-color :: Hitable a => Ray -> [a] -> Vec3
+color :: Hitable a => Ray -> [a] -> IO Vec3
 color r hitables =
   case (hit hitables r 0.0 Utils.maxFloat) of
-    Just (HitRecord _ _ normal) -> -- trace ("hit! " <> show r) $
-      (V.x normal + 1, V.y normal + 1, V.z normal + 1)  .** 0.5
-    Nothing -> 
-        let unitDirection = V.mkUnitVec3 (R.direction r)
-            t = 0.5 * (V.y unitDirection + 1.0)
-        in (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
+
+    Just (HitRecord _ p normal) -> do
+      randInUnitSphere <- Utils.randomInUnitSphere
+      target <- pure $ p .+ normal .+ randInUnitSphere
+      fmap (.** 0.5) $ color (Ray p (target .- p)) hitables
+
+    Nothing -> do
+      let unitDirection = V.mkUnitVec3 (R.direction r)
+          t = 0.5 * (V.y unitDirection + 1.0)
+        in pure $ (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
 
 mkPpmFile :: IO String
 mkPpmFile = do
@@ -57,6 +63,7 @@ mkPpmFile = do
     width = 200
     height = 100
     antialiasingPassCount = 100
+    gamma = 2
 
     camera = C.mkDefaultCamera
 
@@ -80,15 +87,14 @@ mkPpmFile = do
           getPixelColor i j = do
             u <- do
               r <- randomRIO (0.0, 1.0)
-              pure ((fromIntegral i + r) / fromIntegral width :: Double)
+              pure ((toDouble i + r) / toDouble width )
             v <- do
               r <- randomRIO (0.0, 1.0)
-              pure ((fromIntegral j + r) / fromIntegral height :: Double)
-            pure $ color (C.getRay camera u v) hitableList
+              pure ((toDouble j + r) / toDouble height)
+            color (C.getRay camera u v) hitableList
 
           formatColor :: Vec3 -> String
-          formatColor vec = mconcat . intersperse " " . map (show .  (floor :: Double -> Integer)) $
-            [ 255.99 * V.r vec
-            , 255.99 * V.g vec
-            , 255.99 * V.b vec
-            ]
+          formatColor vec = 
+            let normalizeColor =(** (1.0 / (toDouble gamma))) 
+             in
+              mconcat . intersperse " " . map (show .  (floor :: Double -> Integer) . (* 255.99) . normalizeColor) $ [ V.r vec,  V.g vec, V.b vec ]
