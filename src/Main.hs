@@ -27,7 +27,7 @@ main = mkPpmFile >>= writeFile "output.ppm"
 -- gets a color by tracing a ray against a list of hitable objects
 color :: Hitable a => Ray -> [a] -> Int -> IO Vec3
 color r hitables depth =
-  case (hit hitables r 0.0 Utils.maxFloat) of
+  case (hit hitables r 0.001 Utils.maxFloat) of
 
     Just rec@(HitRecord _ p normal mat) -> do
       if depth < 50 then do
