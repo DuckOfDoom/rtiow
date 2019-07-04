@@ -1,50 +1,55 @@
 {-# OPTIONS_GHC -Wno-type-defaults -Wno-name-shadowing #-}
 module Main where
 
+import           Control.Monad
 import           System.IO     (writeFile)
 import           System.Random (randomRIO)
-import           Control.Monad 
 
 import           Data.List     (intersperse)
 import           Data.Monoid   (mconcat)
-import           Debug.Trace
 
 import           Camera        as C (getRay, mkDefaultCamera)
-import           Hitable       (HitRecord (..), Hitable (..))
+import           Hitable       (HitRecord (..), Hitable (..), Material(..))
 import           Ray           (Ray (..))
 import           Sphere        (Sphere (..))
-import           Vec3          (Vec3, (.**), (.+), (.-), (.//))
+import           Vec3          (Vec3, (.*), (.**), (.+), (.-), (.//))
 
 import qualified Ray           as R
 import qualified Vec3          as V
+import qualified Hitable as H
 
+import           Utils         (toDouble)
 import qualified Utils
-import Utils (toDouble)
-
-import Debug.Trace
 
 main :: IO ()
 main = mkPpmFile >>= writeFile "output.ppm"
 
 -- gets a color by tracing a ray against a list of hitable objects
-color :: Hitable a => Ray -> [a] -> IO Vec3
-color r hitables =
+color :: Hitable a => Ray -> [a] -> Int -> IO Vec3
+color r hitables depth =
   case (hit hitables r 0.0 Utils.maxFloat) of
 
-    Just (HitRecord _ p normal) -> do
-      randInUnitSphere <- Utils.randomInUnitSphere
-      target <- pure $ p .+ normal .+ randInUnitSphere
-      fmap (.** 0.5) $ color (Ray p (target .- p)) hitables
+    Just rec@(HitRecord _ p normal mat) -> do
+      if depth < 50 then do
+        scatterResult <- (H.scatter mat r rec)
+        case scatterResult of
+          Just (attenuation, scattered) -> 
+            fmap (.* attenuation) $ color scattered hitables (depth - 1) 
+          Nothing -> pure (0.0, 0.0, 0.0)
+        else
+          pure (0.0, 0.0, 0.0)
 
     Nothing -> do
       let unitDirection = V.mkUnitVec3 (R.direction r)
           t = 0.5 * (V.y unitDirection + 1.0)
         in pure $ (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
 
+  where
+
 mkPpmFile :: IO String
 mkPpmFile = do
-  picture <- unlines <$> flapM js 
-    (\j -> unlines <$> flapM is 
+  picture <- unlines <$> flapM js
+    (\j -> unlines <$> flapM is
       (\i -> mkLine i j)
     )
   pure $ mconcat ["P3\n", show width, " ", show height, "\n255\n"] ++ picture
@@ -68,8 +73,10 @@ mkPpmFile = do
     camera = C.mkDefaultCamera
 
     hitableList =
-      [ Sphere (0, 0, -1) 0.5 
-      , Sphere (0, -100.5, -1) 100
+      [ Sphere (0, 0, -1) 0.5 (Lambertian (0.8, 0.3, 0.3))
+      , Sphere (0, -100.5, -1) 100 (Lambertian (0.8, 0.8, 0.0))
+      , Sphere (1, 0, -1) 0.5 (Metal (0.8, 0.6, 0.2))
+      , Sphere (-1, 0, -1) 0.5 (Metal (0.8, 0.8, 0.8))
       ]
 
     mkLine :: Int -> Int -> IO String
@@ -91,10 +98,10 @@ mkPpmFile = do
             v <- do
               r <- randomRIO (0.0, 1.0)
               pure ((toDouble j + r) / toDouble height)
-            color (C.getRay camera u v) hitableList
+            color (C.getRay camera u v) hitableList 0
 
           formatColor :: Vec3 -> String
-          formatColor vec = 
-            let normalizeColor =(** (1.0 / (toDouble gamma))) 
+          formatColor vec =
+            let normalizeColor = ((floor :: Double -> Integer) . (* 255.99) . (** (1.0 / (toDouble gamma))))
              in
-              mconcat . intersperse " " . map (show .  (floor :: Double -> Integer) . (* 255.99) . normalizeColor) $ [ V.r vec,  V.g vec, V.b vec ]
+              mconcat . intersperse " " . map (show .  normalizeColor) $ [ V.r vec,  V.g vec, V.b vec ]

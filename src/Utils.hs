@@ -12,7 +12,7 @@ import qualified Vec3 as V
 toDouble :: Int -> Double
 toDouble = fromIntegral
 
--- Need to use another method for picking random in sphere
+-- TODO: Need to use another method for picking random in sphere
 randomInUnitSphere :: IO Vec3
 randomInUnitSphere = do
   v <- randV

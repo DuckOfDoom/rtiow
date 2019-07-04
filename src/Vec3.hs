@@ -21,6 +21,7 @@ module Vec3
   , cross
   , length
   , squaredLength
+  , reflect
   )
 where
 
@@ -82,3 +83,6 @@ length v = sqrt(squaredLength v)
 
 squaredLength :: Vec3 -> Double
 squaredLength (x, y, z) = x*x + y*y + z*z
+
+reflect :: Vec3 -> Vec3 -> Vec3
+reflect v n = v .- (n .** (2 * dot v n))
