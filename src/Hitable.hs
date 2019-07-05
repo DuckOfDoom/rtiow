@@ -11,7 +11,6 @@ import           Ray
 import           Vec3 (Vec3, (.+), (.-))
 
 import           Control.Monad.State
-import           Debug.Trace
 
 import qualified Utils
 import qualified Vec3 as V
@@ -27,7 +26,7 @@ data Material
   deriving (Show)
 
 instance Scattering Material where
-  scatter (Lambertian a) ray (HitRecord _ p normal _) = do
+  scatter (Lambertian a) _ (HitRecord _ p normal _) = do
     r <- Utils.randomInUnitSphere
     let 
       target = p .+ normal .+ r

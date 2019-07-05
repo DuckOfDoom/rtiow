@@ -3,8 +3,7 @@ module Camera
 where
 
 import Vec3
-import Ray
-import Debug.Trace
+import Ray hiding (origin)
 
 data Camera = Camera 
   { lowerLeftCorner :: Vec3
