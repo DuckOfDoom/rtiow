@@ -2,23 +2,24 @@
 module Main where
 
 import           Control.Monad
-import           System.IO     (writeFile)
-import           System.Random (randomRIO)
+import           System.IO        (writeFile)
+import           System.IO.Unsafe
+import           System.Random    (randomRIO)
 
-import           Data.List     (intersperse)
-import           Data.Monoid   (mconcat)
+import           Data.List        (intersperse)
+import           Data.Monoid      (mconcat)
 
-import           Camera        as C (getRay, mkDefaultCamera)
-import           Hitable       (HitRecord (..), Hitable (..), Material(..))
-import           Ray           (Ray (..))
-import           Sphere        (Sphere (..))
-import           Vec3          (Vec3, (.*), (.**), (.+), (.-), (.//))
+import           Camera           as C (getRay, mkDefaultCamera)
+import           Hitable          (HitRecord (..), Hitable (..), Material (..))
+import           Ray              (Ray (..))
+import           Sphere           (Sphere (..))
+import           Vec3             (Vec3, (.*), (.**), (.+), (.-), (.//))
 
-import qualified Ray           as R
-import qualified Vec3          as V
-import qualified Hitable as H
+import qualified Hitable          as H
+import qualified Ray              as R
+import qualified Vec3             as V
 
-import           Utils         (toDouble)
+import           Utils            (toDouble)
 import qualified Utils
 
 main :: IO ()
@@ -33,8 +34,8 @@ color r hitables depth =
       if depth < 50 then do
         scatterResult <- (H.scatter mat r rec)
         case scatterResult of
-          Just (attenuation, scattered) -> 
-            fmap (.* attenuation) $ color scattered hitables (depth - 1) 
+          Just (attenuation, scattered) ->
+            fmap (.* attenuation) $ color scattered hitables (depth - 1)
           Nothing -> pure (0.0, 0.0, 0.0)
         else
           pure (0.0, 0.0, 0.0)
@@ -65,8 +66,8 @@ mkPpmFile = do
 
     flapM = flip mapM
 
-    width = 200
-    height = 100
+    width = 640
+    height = 480
     antialiasingPassCount = 100
     gamma = 2
 
@@ -75,9 +76,32 @@ mkPpmFile = do
     hitableList =
       [ Sphere (0, 0, -1) 0.5 (Lambertian (0.8, 0.3, 0.3))
       , Sphere (0, -100.5, -1) 100 (Lambertian (0.8, 0.8, 0.0))
-      , Sphere (1, 0, -1) 0.5 (Metal (0.8, 0.6, 0.2))
-      , Sphere (-1, 0, -1) 0.5 (Metal (0.8, 0.8, 0.8))
-      ]
+      -- , Sphere (1, 0, -1) 0.5 (Metal (0.8, 0.6, 0.2))
+      -- , Sphere (-1, 0, -1) 0.5 (Metal (0.8, 0.8, 0.8))
+      ] ++ (unsafePerformIO $ replicateM 20 getRandomSphere)
+
+    getRandomSphere :: IO Sphere
+    getRandomSphere =
+      let rand = randomRIO (-1.0, 1.0)
+          randC = randomRIO (0.0, 1.0)
+       in
+        do
+        x <- rand
+        y <- rand
+        rad <- randomRIO (0.01, 0.5)
+        r <- randC
+        g <- randC
+        b <- randC
+        rr <- randC
+        rg <- randC
+        rb <- randC
+        matSelector <- rand
+        mat <- if matSelector > 0
+          then
+            pure (Lambertian (rr, rg, rb))
+          else
+            pure (Metal (rr, rg, rb))
+        pure (Sphere (x, y, -1) rad mat)
 
     mkLine :: Int -> Int -> IO String
     mkLine i j = do
