@@ -4,6 +4,7 @@ module Main where
 import           Control.Monad
 import           System.IO     (writeFile)
 -- import           System.IO.Unsafe
+
 import           System.Random (randomRIO)
 
 import           Data.List     (intersperse)
@@ -22,7 +23,7 @@ import qualified Vec3          as V
 import           Utils         (toDouble)
 import qualified Utils
 
-import Graphics.Gloss 
+import Graphics.Gloss
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 
@@ -38,17 +39,17 @@ main = do
   -- writeFile "output.ppm" (mkPpmFile pic)
 
 showPicture :: [[Vec3]] -> IO ()
-showPicture pic = let 
+showPicture pic = let
   convertPixel :: Vec3 -> ByteString
   convertPixel (r, g, b) = BS.pack (map (fromIntegral . truncate) [ r, g, b, 255 ])
   bitmapData :: ByteString
-  bitmapData = BS.concat . ((map convertPixel) . concat) $ pic
+  bitmapData = BS.concat . (map convertPixel . concat) $ pic
   picture = bitmapOfByteString width height (BitmapFormat TopToBottom PxRGBA) bitmapData True
   in display (InWindow "Balls" (640, 480) (0, 0)) white picture
 
 mkPicture :: IO [[Vec3]]
 mkPicture =
-  flapM js (\j -> flapM is (\i -> mkPixel i j))
+  forM js (\j -> forM is (\i -> mkPixel i j))
   where
     is = [0..width-1]
     js =
@@ -58,7 +59,6 @@ mkPicture =
         j2 = height-2
         in [j1, j2..0]
 
-    flapM = flip mapM
 
     camera = C.mkDefaultCamera
 
@@ -69,6 +69,7 @@ mkPicture =
       , Sphere (-1, 0, -1) 0.5 (Metal (0.8, 0.8, 0.8))
       ]
       -- ++ (unsafePerformIO $ replicateM 20 getRandomSphere)
+
 
     getRandomSphere :: IO Sphere
     getRandomSphere =
@@ -92,9 +93,9 @@ mkPicture =
 
     mkPixel :: Int -> Int -> IO Vec3
     mkPixel i j = do
-      pColor <- if antialiasingPassCount > 1 
+      pColor <- if antialiasingPassCount > 1
         then
-          getAverageColor i j 
+          getAverageColor i j
         else
           getPixelColor i j
 
@@ -120,29 +121,27 @@ mkPicture =
           formatColor (r, g, b) = (norm r, norm g, norm b)
             where
               norm :: Double -> Double
-              norm = (toDouble . truncate . (* 255.99) . (** (1.0 / (toDouble gamma))))
+              norm = toDouble . truncate . (* 255.99) . (** (1.0 / toDouble gamma))
 
 -- gets a color by tracing a ray against a list of hitable objects
 computeColor :: Hitable a => Ray -> [a] -> Int -> IO Vec3
 computeColor r hitables depth =
-  case (hit hitables r 0.001 Utils.maxFloat) of
+  case hit hitables r 0.001 Utils.maxFloat of
 
-    Just rec@(HitRecord _ _ _ mat) -> do
+    Just rec@(HitRecord _ _ _ mat) ->
       if depth < 50 then do
-        scatterResult <- (H.scatter mat r rec)
+        scatterResult <- H.scatter mat r rec
         case scatterResult of
           Just (attenuation, scattered) ->
-            fmap (.* attenuation) $ computeColor scattered hitables (depth - 1)
+            (.* attenuation) <$> computeColor scattered hitables (depth - 1)
           Nothing -> pure (0.0, 0.0, 0.0)
         else
           pure (0.0, 0.0, 0.0)
 
-    Nothing -> do
+    Nothing ->
       let unitDirection = V.mkUnitVec3 (R.direction r)
           t = 0.5 * (V.y unitDirection + 1.0)
         in pure $ (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
-
-  where
 
 mkPpmFile :: [[Vec3]] -> String
 mkPpmFile pixels = header ++ body
@@ -151,7 +150,7 @@ mkPpmFile pixels = header ++ body
 
     join = mconcat . intersperse " "
     joinLine = mconcat . intersperse "\n"
-    formatColor (r, g, b) = (join . map show) $ [ r, g, b ]
+    formatColor (r, g, b) = join . map show $ [ r, g, b ]
 
     body :: String
-    body = joinLine . map (\x -> (joinLine . map formatColor) x) $ pixels
+    body = joinLine . map (joinLine . map formatColor) $ pixels
