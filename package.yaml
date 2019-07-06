@@ -11,7 +11,9 @@ category:            Web
 extra-source-files:
 - README.md
 
-# default-extensions:
+default-extensions:
+- MultiWayIf
+
 ghc-options:
 - -Wall
 

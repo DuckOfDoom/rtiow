@@ -3,7 +3,7 @@ module Main where
 
 import           Control.Monad
 import           System.IO     (writeFile)
--- import           System.IO.Unsafe
+import           System.IO.Unsafe
 
 import           System.Random (randomRIO)
 
@@ -29,7 +29,7 @@ import Data.ByteString (ByteString)
 
 width = 200
 height = 100
-antialiasingPassCount = 0
+antialiasingPassCount = 100
 gamma = 2
 
 main :: IO ()
@@ -45,7 +45,7 @@ showPicture pic = let
   bitmapData :: ByteString
   bitmapData = BS.concat . (map convertPixel . concat) $ pic
   picture = bitmapOfByteString width height (BitmapFormat TopToBottom PxRGBA) bitmapData True
-  in display (InWindow "Balls" (640, 480) (0, 0)) white picture
+  in display (InWindow "Balls" (width, height) (960 - 100, 600 - 50)) white picture
 
 mkPicture :: IO [[Vec3]]
 mkPicture =
@@ -59,32 +59,27 @@ mkPicture =
         j2 = height-2
         in [j1, j2..0]
 
-
     camera = C.mkDefaultCamera
 
     hitableList =
-      [ Sphere (0, 0, -1) 0.5 (Lambertian (0.8, 0.3, 0.3))
+      [ Sphere (0, 0, -1) 0.5 (Lambertian (0.1, 0.2, 0.5))
       , Sphere (0, -100.5, -1) 100 (Lambertian (0.8, 0.8, 0.0))
       , Sphere (1, 0, -1) 0.5 (Metal (0.8, 0.6, 0.2))
-      , Sphere (-1, 0, -1) 0.5 (Metal (0.8, 0.8, 0.8))
-      ]
-      -- ++ (unsafePerformIO $ replicateM 20 getRandomSphere)
+      , Sphere (-1, 0, -1) 0.5 (Dielectric 1.5)
+      , Sphere (-1, 0, -1) (-0.45) (Dielectric 1.5)
+      ] -- ++ randomSpheres 30
 
-
-    getRandomSphere :: IO Sphere
-    getRandomSphere =
-      let rand = randomRIO (-1.0, 1.0)
-          randC = randomRIO (0.0, 1.0)
-       in
-        do
-        x <- rand
-        y <- rand
-        rad <- randomRIO (0.01, 0.5)
-        r <- randC
-        g <- randC
-        b <- randC
-        matSelector <- rand
-        mat <- if matSelector > 0
+    randomSpheres :: Int -> [Sphere]
+    randomSpheres count = 
+        unsafePerformIO $ replicateM count $ do
+        x <- randomRIO (-1.0, 1.0)
+        y <- randomRIO (-1.0, 1.0)
+        rad <- randomRIO (0.01, 0.3)
+        r <- randomRIO (0.0, 1.0)
+        g <- randomRIO (0.0, 1.0)
+        b <- randomRIO (0.0, 1.0)
+        matSelector <- randomRIO (0, 1) :: IO Int
+        mat <- if matSelector == 0
           then
             pure (Lambertian (r, g, b))
           else
