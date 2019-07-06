@@ -22,15 +22,29 @@ import qualified Vec3          as V
 import           Utils         (toDouble)
 import qualified Utils
 
+import Graphics.Gloss 
+import qualified Data.ByteString as BS
+import Data.ByteString (ByteString)
+
 width = 200
 height = 100
-antialiasingPassCount = 100
+antialiasingPassCount = 0
 gamma = 2
 
 main :: IO ()
 main = do
   pic <- mkPicture
-  writeFile "output.ppm" (mkPpmFile pic)
+  showPicture pic
+  -- writeFile "output.ppm" (mkPpmFile pic)
+
+showPicture :: [[Vec3]] -> IO ()
+showPicture pic = let 
+  convertPixel :: Vec3 -> ByteString
+  convertPixel (r, g, b) = BS.pack (map (fromIntegral . truncate) [ r, g, b, 255 ])
+  bitmapData :: ByteString
+  bitmapData = BS.concat . ((map convertPixel) . concat) $ pic
+  picture = bitmapOfByteString width height (BitmapFormat TopToBottom PxRGBA) bitmapData True
+  in display (InWindow "Balls" (640, 480) (0, 0)) white picture
 
 mkPicture :: IO [[Vec3]]
 mkPicture =
@@ -78,7 +92,12 @@ mkPicture =
 
     mkPixel :: Int -> Int -> IO Vec3
     mkPixel i j = do
-      pColor <- getAverageColor i j
+      pColor <- if antialiasingPassCount > 1 
+        then
+          getAverageColor i j 
+        else
+          getPixelColor i j
+
       pure $ formatColor pColor
         where
           getAverageColor :: Int -> Int -> IO Vec3
@@ -95,7 +114,7 @@ mkPicture =
             v <- do
               r <- randomRIO (0.0, 1.0)
               pure ((toDouble j + r) / toDouble height)
-            color (C.getRay camera u v) hitableList 0
+            computeColor (C.getRay camera u v) hitableList 0
 
           formatColor :: Vec3 -> Vec3
           formatColor (r, g, b) = (norm r, norm g, norm b)
@@ -104,8 +123,8 @@ mkPicture =
               norm = (toDouble . truncate . (* 255.99) . (** (1.0 / (toDouble gamma))))
 
 -- gets a color by tracing a ray against a list of hitable objects
-color :: Hitable a => Ray -> [a] -> Int -> IO Vec3
-color r hitables depth =
+computeColor :: Hitable a => Ray -> [a] -> Int -> IO Vec3
+computeColor r hitables depth =
   case (hit hitables r 0.001 Utils.maxFloat) of
 
     Just rec@(HitRecord _ _ _ mat) -> do
@@ -113,7 +132,7 @@ color r hitables depth =
         scatterResult <- (H.scatter mat r rec)
         case scatterResult of
           Just (attenuation, scattered) ->
-            fmap (.* attenuation) $ color scattered hitables (depth - 1)
+            fmap (.* attenuation) $ computeColor scattered hitables (depth - 1)
           Nothing -> pure (0.0, 0.0, 0.0)
         else
           pure (0.0, 0.0, 0.0)

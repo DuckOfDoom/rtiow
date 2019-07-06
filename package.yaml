@@ -19,6 +19,8 @@ dependencies:
   - base >= 4.7 && < 5
   - mtl 
   - random
+  - gloss
+  - bytestring
   #- lens 
 
 executables:
