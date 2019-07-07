@@ -10,7 +10,7 @@ import           System.Random (randomRIO)
 import           Data.List     (intersperse)
 import           Data.Monoid   (mconcat)
 
-import           Camera        as C (getRay, mkDefaultCamera)
+import           Camera        as C (getRay, mkCamera)
 import           Hitable       (HitRecord (..), Hitable (..), Material (..))
 import           Ray           (Ray (..))
 import           Sphere        (Sphere (..))
@@ -29,7 +29,7 @@ import Data.ByteString (ByteString)
 
 width = 200
 height = 100
-antialiasingPassCount = 100
+antialiasingPassCount = 0
 gamma = 2
 
 main :: IO ()
@@ -59,7 +59,7 @@ mkPicture =
         j2 = height-2
         in [j1, j2..0]
 
-    camera = C.mkDefaultCamera
+    camera = C.mkCamera (-2, 2, 1) (0, 0, -1) (0, 1, 0) 90 (fromIntegral width / fromIntegral height)
 
     hitableList =
       [ Sphere (0, 0, -1) 0.5 (Lambertian (0.1, 0.2, 0.5))

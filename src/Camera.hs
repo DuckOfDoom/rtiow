@@ -1,9 +1,9 @@
-{-# LANGUAGE RecordWildCards #-}
 module Camera 
 where
 
-import Vec3
+import Vec3 (Vec3, (.-), (.**), (.+))
 import Ray hiding (origin)
+import qualified Vec3 as V
 
 data Camera = Camera 
   { lowerLeftCorner :: Vec3
@@ -20,5 +20,22 @@ mkDefaultCamera = Camera
  , origin = (0.0, 0.0, 0.0)
  }
 
+mkCamera :: Vec3 -> Vec3 -> Vec3 -> Double -> Double -> Camera
+mkCamera lookFrom lookAt vUp vFov aspect = let
+  theta = vFov * pi / 180.0
+  halfHeight = tan (theta / 2.0)
+  halfWidth = aspect * halfHeight
+  origin = lookFrom
+  w = V.mkUnitVec3 (lookFrom .- lookAt)
+  u = V.mkUnitVec3 (V.cross vUp w)
+  v = V.cross w u
+
+  -- lowerLeftCorner = (-halfWidth, -halfHeight, -1.0)
+  lowerLeftCorner = origin .- u .** halfWidth .- v .** halfHeight .- w
+  horizontal = u .** (halfWidth * 2)
+  vertical = v .** (halfHeight * 2)
+  in 
+    Camera lowerLeftCorner horizontal vertical origin
+
 getRay :: Camera -> Double -> Double -> Ray
-getRay Camera{..} u v = Ray origin (lowerLeftCorner .+ (horizontal .** u) .+ (vertical .** v) .- origin)
+getRay (Camera llc hor vert orig) u v = Ray orig (llc .+ (hor .** u) .+ (vert .** v) .- orig)
