@@ -20,8 +20,9 @@ mkDefaultCamera = Camera
  , origin = (0.0, 0.0, 0.0)
  }
 
-mkCamera :: Vec3 -> Vec3 -> Vec3 -> Double -> Double -> Camera
-mkCamera lookFrom lookAt vUp vFov aspect = let
+mkCamera :: Vec3 -> Vec3 -> Vec3 -> Double -> Double -> Double -> Double -> Camera
+mkCamera lookFrom lookAt vUp vFov aspect aperture focusDist = let
+  lensRadius = aperture / 2.0
   theta = vFov * pi / 180.0
   halfHeight = tan (theta / 2.0)
   halfWidth = aspect * halfHeight
@@ -31,11 +32,14 @@ mkCamera lookFrom lookAt vUp vFov aspect = let
   v = V.cross w u
 
   -- lowerLeftCorner = (-halfWidth, -halfHeight, -1.0)
-  lowerLeftCorner = origin .- u .** halfWidth .- v .** halfHeight .- w
+  lowerLeftCorner = origin .- u .** halfWidth .** focusDist  .- v .** halfHeight .** focusDist .- w .** focusDist
   horizontal = u .** (halfWidth * 2)
   vertical = v .** (halfHeight * 2)
   in 
     Camera lowerLeftCorner horizontal vertical origin
+
+-- getRay :: Camera -> Double -> Double -> Ray
+-- getRay (Camera llc hor vert orig) u v = Ray orig (llc .+ (hor .** u) .+ (vert .** v) .- orig)
 
 getRay :: Camera -> Double -> Double -> Ray
 getRay (Camera llc hor vert orig) u v = Ray orig (llc .+ (hor .** u) .+ (vert .** v) .- orig)
