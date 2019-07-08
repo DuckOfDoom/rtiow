@@ -14,7 +14,7 @@ import           Camera        as C (getRay, mkCamera)
 import           Hitable       (HitRecord (..), Hitable (..), Material (..))
 import           Ray           (Ray (..))
 import           Sphere        (Sphere (..))
-import           Vec3          (Vec3, (.*), (.**), (.+), (.//))
+import           Vec3          (Vec3, (.*), (.**), (.+), (.//), (.-))
 
 import qualified Hitable       as H
 import qualified Ray           as R
@@ -29,14 +29,14 @@ import Data.ByteString (ByteString)
 
 width = 200
 height = 100
-antialiasingPassCount = 0
+antialiasingPassCount = 50
 gamma = 2
 
 main :: IO ()
 main = do
   pic <- mkPicture
-  showPicture pic
-  -- writeFile "output.ppm" (mkPpmFile pic)
+  -- showPicture pic
+  writeFile "output.ppm" (mkPpmFile pic)
 
 showPicture :: [[Vec3]] -> IO ()
 showPicture pic = let
@@ -59,7 +59,14 @@ mkPicture =
         j2 = height-2
         in [j1, j2..0]
 
-    camera = C.mkCamera (-2, 2, 1) (0, 0, -1) (0, 1, 0) 90 (fromIntegral width / fromIntegral height)
+    -- Camera creation
+    lookFrom = (3.0, 3.0, 2.0)
+    lookAt = (0.0, 0.0, -1.0)
+    distToFocus = V.length (lookFrom .- lookAt)
+    aperture = 2.0
+    ratio = fromIntegral width / fromIntegral height
+
+    camera = C.mkCamera lookFrom lookAt (0.0, 1.0, 0.0) 20 ratio aperture distToFocus
 
     hitableList =
       [ Sphere (0, 0, -1) 0.5 (Lambertian (0.1, 0.2, 0.5))
@@ -110,7 +117,8 @@ mkPicture =
             v <- do
               r <- randomRIO (0.0, 1.0)
               pure ((toDouble j + r) / toDouble height)
-            computeColor (C.getRay camera u v) hitableList 0
+            ray <- C.getRay camera u v
+            computeColor ray hitableList 0 -- depth?
 
           formatColor :: Vec3 -> Vec3
           formatColor (r, g, b) = (norm r, norm g, norm b)
