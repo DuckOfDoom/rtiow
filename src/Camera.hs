@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wname-shadowing #-}
 module Camera
 where
 
@@ -5,6 +6,7 @@ import           Ray           hiding (origin)
 import           System.Random
 import           Vec3          (Vec3, (.**), (.+), (.-))
 import qualified Vec3          as V
+import Debug.Trace 
 
 data Camera = Camera
   { lowerLeftCorner :: Vec3
@@ -48,7 +50,8 @@ randomInUnitDisk :: IO Vec3
 randomInUnitDisk = do
   x <- randomRIO (0.0, 1.0)
   y <- randomRIO (0.0, 1.0)
-  pure $ (x, y, 0) .** 2.0 .- (1, 1, 0)
+  let p = ((x, y, 0) .** 2.0) .- (1, 1, 0)
+  if V.dot p p >= 1.0 then randomInUnitDisk else pure p
 
 getRay :: Camera -> Double -> Double -> IO Ray
 getRay (Camera llc hor vert orig lr u v w) s t = do

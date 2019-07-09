@@ -60,13 +60,14 @@ mkPicture =
         in [j1, j2..0]
 
     -- Camera creation
-    lookFrom = (3.0, 3.0, 2.0)
+    lookFrom = (-2.0, 2.0, 1.0)
     lookAt = (0.0, 0.0, -1.0)
+    vUp = (0.0, 1.0, 0.0)
     distToFocus = V.length (lookFrom .- lookAt)
     aperture = 2.0
     ratio = fromIntegral width / fromIntegral height
 
-    camera = C.mkCamera lookFrom lookAt (0.0, 1.0, 0.0) 20 ratio aperture distToFocus
+    camera = C.mkCamera lookFrom lookAt vUp 20 ratio aperture distToFocus
 
     hitableList =
       [ Sphere (0, 0, -1) 0.5 (Lambertian (0.1, 0.2, 0.5))

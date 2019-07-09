@@ -8,8 +8,8 @@ import qualified Ray     as R
 import qualified Vec3    as V
 
 data Sphere = Sphere
-  { center :: Vec3
-  , radius :: Double
+  { center   :: Vec3
+  , radius   :: Double
   , material :: Material
   }
   deriving (Show)
