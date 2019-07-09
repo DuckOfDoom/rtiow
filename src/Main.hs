@@ -2,30 +2,30 @@
 module Main where
 
 import           Control.Monad
-import           System.IO     (writeFile)
+import           System.IO        (writeFile)
 import           System.IO.Unsafe
 
-import           System.Random (randomRIO)
+import           System.Random    (randomRIO)
 
-import           Data.List     (intersperse)
-import           Data.Monoid   (mconcat)
+import           Data.List        (intersperse)
+import           Data.Monoid      (mconcat)
 
-import           Camera        as C (getRay, mkCamera)
-import           Hitable       (HitRecord (..), Hitable (..), Material (..))
-import           Ray           (Ray (..))
-import           Sphere        (Sphere (..))
-import           Vec3          (Vec3, (.*), (.**), (.+), (.//), (.-))
+import           Camera           as C (getRay, mkCamera)
+import           Hitable          (HitRecord (..), Hitable (..), Material (..))
+import           Ray              (Ray (..))
+import           Sphere           (Sphere (..))
+import           Vec3             (Vec3, (.*), (.**), (.+), (.-), (.//))
 
-import qualified Hitable       as H
-import qualified Ray           as R
-import qualified Vec3          as V
+import qualified Hitable          as H
+import qualified Ray              as R
+import qualified Vec3             as V
 
-import           Utils         (toDouble)
+import           Utils            (toDouble)
 import qualified Utils
 
-import Graphics.Gloss
-import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
+import           Data.ByteString  (ByteString)
+import qualified Data.ByteString  as BS
+import           Graphics.Gloss
 
 width = 200
 height = 100
@@ -77,7 +77,7 @@ mkPicture =
       ] -- ++ randomSpheres 30
 
     randomSpheres :: Int -> [Sphere]
-    randomSpheres count = 
+    randomSpheres count =
         unsafePerformIO $ replicateM count $ do
         x <- randomRIO (-1.0, 1.0)
         y <- randomRIO (-1.0, 1.0)

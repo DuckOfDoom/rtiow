@@ -26,7 +26,7 @@ module Vec3
   )
 where
 
-import Prelude hiding (length)
+import           Prelude hiding (length)
 
 type Vec3 = (Double, Double, Double)
 
@@ -89,13 +89,13 @@ reflect :: Vec3 -> Vec3 -> Vec3
 reflect v n = v .- (n .** (2 * dot v n))
 
 refract :: Vec3 -> Vec3 -> Double -> Maybe Vec3
-refract v n niOverNt  = 
-  let 
+refract v n niOverNt  =
+  let
     uv = mkUnitVec3 v
     dt = dot uv n
     discriminant = 1.0 - niOverNt * niOverNt * (1 - dt * dt)
     in
-    if discriminant > 0 then 
+    if discriminant > 0 then
       Just $ (uv .- n .** dt) .** niOverNt .- n .** sqrt discriminant
     else
       Nothing
