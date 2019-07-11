@@ -23,6 +23,7 @@ dependencies:
   - random
   - gloss
   - bytestring
+  - streamly
   #- lens 
 
 executables:

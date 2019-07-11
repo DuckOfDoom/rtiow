@@ -27,6 +27,8 @@ import           Data.ByteString  (ByteString)
 import qualified Data.ByteString  as BS
 import           Graphics.Gloss
 
+import qualified Streamly as S
+
 width = 200
 height = 100
 antialiasingPassCount = 50
@@ -38,18 +40,21 @@ main = do
   -- showPicture pic
   writeFile "output.ppm" (mkPpmFile pic)
 
-showPicture :: [[Vec3]] -> IO ()
+showPicture :: [Vec3] -> IO ()
 showPicture pic = let
   convertPixel :: Vec3 -> ByteString
   convertPixel (r, g, b) = BS.pack (map (fromIntegral . truncate) [ r, g, b, 255 ])
   bitmapData :: ByteString
-  bitmapData = BS.concat . (map convertPixel . concat) $ pic
+  bitmapData = BS.concat . map convertPixel $ pic
   picture = bitmapOfByteString width height (BitmapFormat TopToBottom PxRGBA) bitmapData True
   in display (InWindow "Balls" (width, height) (960 - 100, 600 - 50)) white picture
 
-mkPicture :: IO [[Vec3]]
+mkPicture :: IO [Vec3]
 mkPicture =
-  forM js (\j -> forM is (\i -> mkPixel i j))
+  mapM mkPixel mkCoords
+  -- forM js (\j -> forM is (\i -> mkPixel i j))
+  -- S.mapM mkPixel $ S.fromList mkCoords
+
   where
     is = [0..width-1]
     js =
@@ -58,6 +63,9 @@ mkPicture =
         j1 = height-1
         j2 = height-2
         in [j1, j2..0]
+
+    mkCoords :: [(Int, Int)]
+    mkCoords = foldl1 (++) $ map (\i -> map (\j -> (j, i)) js) is
 
     -- Camera creation
     lookFrom = (-2.0, 2.0, 1.0)
@@ -94,8 +102,8 @@ mkPicture =
             pure (Metal (r, g, b))
         pure (Sphere (x, y, -1) rad mat)
 
-    mkPixel :: Int -> Int -> IO Vec3
-    mkPixel i j = do
+    mkPixel :: (Int, Int) -> IO Vec3
+    mkPixel (i, j) = do
       pColor <- if antialiasingPassCount > 1
         then
           getAverageColor i j
@@ -147,7 +155,7 @@ computeColor r hitables depth =
           t = 0.5 * (V.y unitDirection + 1.0)
         in pure $ (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
 
-mkPpmFile :: [[Vec3]] -> String
+mkPpmFile :: [Vec3] -> String
 mkPpmFile pixels = header ++ body
   where
     header = mconcat ["P3\n", show width, " ", show height, "\n255\n"]
@@ -156,5 +164,8 @@ mkPpmFile pixels = header ++ body
     joinLine = mconcat . intersperse "\n"
     formatColor (r, g, b) = join . map show $ [ r, g, b ]
 
+    insertNewlines :: [String] -> [String]
+    insertNewlines xs = [if i == 2 then ... else ... | (i,x) <- zip [0..] list, x == k]
+
     body :: String
-    body = joinLine . map (joinLine . map formatColor) $ pixels
+    body = map formatColor pixels
