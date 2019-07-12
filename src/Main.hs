@@ -26,19 +26,27 @@ import qualified Utils
 import           Data.ByteString  (ByteString)
 import qualified Data.ByteString  as BS
 import           Graphics.Gloss
+import           Data.List.Split (chunksOf)
+import           Debug.Trace
 
-import qualified Streamly as S
+-- import qualified Streamly.Prelude as S
+import Conduit 
+
+import Control.DeepSeq (force)
+
+import Codec.Picture 
+import Codec.Picture.Png
 
 width = 200
 height = 100
-antialiasingPassCount = 50
+antialiasingPassCount = 100
 gamma = 2
 
 main :: IO ()
 main = do
   pic <- mkPicture
+  saveAsPng "output.png" pic
   -- showPicture pic
-  writeFile "output.ppm" (mkPpmFile pic)
 
 showPicture :: [Vec3] -> IO ()
 showPicture pic = let
@@ -49,11 +57,43 @@ showPicture pic = let
   picture = bitmapOfByteString width height (BitmapFormat TopToBottom PxRGBA) bitmapData True
   in display (InWindow "Balls" (width, height) (960 - 100, 600 - 50)) white picture
 
+saveAsPng :: FilePath -> [Vec3] -> IO ()
+saveAsPng path pic = let 
+  vec3ToPixel (r, g, b) = PixelRGB8 (truncate r) (truncate g) (truncate b)
+  pixelTable = chunksOf width pic
+  img = generateImage (\x y -> vec3ToPixel $ pixelTable !! y !! x) width height
+  in
+  writePng path img
+  
+saveAsPpm :: FilePath -> [Vec3] -> IO ()
+saveAsPpm path pixels = writeFile path mkPpmFile
+  where
+    mkPpmFile = header ++ body
+    header = mconcat ["P3\n", show width, " ", show height, "\n255\n"]
+
+    join = mconcat . intersperse " "
+    joinLine = mconcat . intersperse "\n"
+    formatColor (r, g, b) = join . map show $ [ r, g, b ]
+
+    insertNewlines :: [String] -> [String]
+    insertNewlines = loop 0
+      where 
+        loop _ [] = []
+        loop i (x:xs)
+         | i >= (width - 1) = x : "\n" : loop 0 xs
+         | otherwise = x : " " : loop (i + 1) xs
+        loop _ x = x
+ 
+    body :: String
+    body = (mconcat . insertNewlines . map formatColor) pixels
+  
 mkPicture :: IO [Vec3]
 mkPicture =
   mapM mkPixel mkCoords
   -- forM js (\j -> forM is (\i -> mkPixel i j))
-  -- S.mapM mkPixel $ S.fromList mkCoords
+  -- S.toList $ S.mapM mkPixel $ S.fromList mkCoords
+
+  -- runConduit $ yieldMany mkCoords .| mapMC mkPixel .| sinkList
 
   where
     is = [0..width-1]
@@ -103,12 +143,12 @@ mkPicture =
         pure (Sphere (x, y, -1) rad mat)
 
     mkPixel :: (Int, Int) -> IO Vec3
-    mkPixel (i, j) = do
+    mkPixel (i, j) = do 
       pColor <- if antialiasingPassCount > 1
         then
-          getAverageColor i j
+          force getAverageColor i j
         else
-          getPixelColor i j
+          force getPixelColor i j
 
       pure $ formatColor pColor
         where
@@ -154,18 +194,3 @@ computeColor r hitables depth =
       let unitDirection = V.mkUnitVec3 (R.direction r)
           t = 0.5 * (V.y unitDirection + 1.0)
         in pure $ (1.0, 1.0, 1.0) .** (1.0 - t) .+ (0.5, 0.7, 1.0) .** t
-
-mkPpmFile :: [Vec3] -> String
-mkPpmFile pixels = header ++ body
-  where
-    header = mconcat ["P3\n", show width, " ", show height, "\n255\n"]
-
-    join = mconcat . intersperse " "
-    joinLine = mconcat . intersperse "\n"
-    formatColor (r, g, b) = join . map show $ [ r, g, b ]
-
-    insertNewlines :: [String] -> [String]
-    insertNewlines xs = [if i == 2 then ... else ... | (i,x) <- zip [0..] list, x == k]
-
-    body :: String
-    body = map formatColor pixels

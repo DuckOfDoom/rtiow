@@ -22,8 +22,12 @@ dependencies:
   - mtl 
   - random
   - gloss
+  - JuicyPixels
   - bytestring
+  - split
   - streamly
+  - conduit
+  - deepseq
   #- lens 
 
 executables:
